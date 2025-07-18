@@ -1,50 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mourish Education</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f2f2f2; }
-    .container { max-width: 500px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h1, h2 { text-align: center; color: #333; }
-    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
-    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-    button:hover { background: #45a049; }
-    #admin-section, #student-section { display: none; }
-    .logout-btn { background: #e74c3c; margin-top: 20px; }
-    .student-list { margin: 10px 0; }
-    .student-list div { background: #eee; padding: 8px; margin: 5px 0; border-radius: 5px; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; }
+    .container { max-width: 420px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+    h1 { color: #333; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+    button { cursor: pointer; }
+    .login-btn { background: #4CAF50; color: white; border: none; }
+    .logout-btn { background: #e74c3c; color: white; border: none; }
+    .whatsapp-btn { background: #25D366; color: white; border: none; padding: 10px; border-radius: 5px; margin-top: 5px; }
   </style>
 </head>
 <body>
 
-  <div class="container" id="login-section">
+  <!-- Login -->
+  <div class="container" id="login-page">
     <h1>Mourish Education</h1>
-    <h2>Login</h2>
-    <label>Login as:</label>
-    <select id="login-role">
+    <input type="email" id="login-email" placeholder="Email" />
+    <input type="password" id="login-password" placeholder="Password" />
+    <select id="user-role">
       <option value="student">Student</option>
-      <option value="admin">Admin</option>
+      <option value="teacher">Teacher</option>
     </select>
-    <div id="student-login">
-      <label>Select Student:</label>
-      <select id="student-select"></select>
-      <button id="student-login-btn">Login as Student</button>
-    </div>
-    <div id="admin-login" style="display:none;">
-      <label>Admin Password:</label>
-      <input type="password" id="admin-password">
-      <button id="admin-login-btn">Login as Admin</button>
-    </div>
-  </div>
-
-  <!-- Admin Section -->
-  <div class="container" id="admin-section">
-    <h1>Admin Dashboard</h1>
-    <h2>Add Student</h2>
-    <input type="text" id="student-name" placeholder="Student Name">
-    <select id="student-grade">
+    <select id="grade">
       <option value="6">Grade 6</option>
       <option value="7">Grade 7</option>
       <option value="8">Grade 8</option>
@@ -53,30 +35,46 @@
       <option value="11">Grade 11</option>
       <option value="12">Grade 12</option>
     </select>
-    <button id="add-student-btn">Add Student</button>
-    <h2>Student List</h2>
-    <div class="student-list" id="admin-student-list"></div>
-    <button class="logout-btn" id="logout-admin">Logout</button>
+    <select id="subject">
+      <option value="Web Development">Web Development</option>
+      <option value="App Development">App Development</option>
+    </select>
+    <button class="login-btn" onclick="loginUser()">Login</button>
   </div>
 
-  <!-- Student Section -->
-  <div class="container" id="student-section">
-    <h1>Welcome, <span id="student-name-display"></span></h1>
-    <h2>Grade: <span id="student-grade-display"></span></h2>
-    <h2>Subjects:</h2>
-    <ul id="student-subjects"></ul>
-    <button class="logout-btn" id="logout-student">Logout</button>
+  <!-- Dashboard -->
+  <div class="container" id="dashboard" style="display:none;">
+    <h1 id="dashboard-title"></h1>
+
+    <!-- Teacher Section -->
+    <div id="teacher-section" style="display:none;">
+      <p>Enter your WhatsApp number:</p>
+      <input type="text" id="teacher-phone" placeholder="+911234567890" />
+      <button class="login-btn" onclick="saveTeacherPhone()">Save Phone Number</button>
+      <p><b>Your WhatsApp:</b> <span id="teacher-phone-display">Not set</span></p>
+      <button class="whatsapp-btn" onclick="openWhatsAppTeacher()">Open WhatsApp</button>
+    </div>
+
+    <!-- Student Section -->
+    <div id="student-section" style="display:none;">
+      <h3>Your Teacher's WhatsApp Contact</h3>
+      <p id="teacher-contact">No teacher phone set.</p>
+      <button class="whatsapp-btn" onclick="openWhatsAppStudent()">Message Teacher</button>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">Logout</button>
   </div>
 
   <script type="module">
-    // Firebase setup
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, push } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+    import { 
+      getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile 
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDsD45pM8PM4VgeBASceBaiO69mCbqUPHE",
       authDomain: "mourish-education.firebaseapp.com",
-      databaseURL: "https://mourish-education-default-rtdb.firebaseio.com/",
       projectId: "mourish-education",
       storageBucket: "mourish-education.firebasestorage.app",
       messagingSenderId: "28402952102",
@@ -84,150 +82,285 @@
       measurementId: "G-Z5YHWLFYT9"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const auth = getAuth(app);
 
-    const loginSection = document.getElementById('login-section');
-    const adminSection = document.getElementById('admin-section');
-    const studentSection = document.getElementById('student-section');
-    const loginRole = document.getElementById('login-role');
-    const adminPassword = document.getElementById('admin-password');
-    const studentSelect = document.getElementById('student-select');
-    const adminLogin = document.getElementById('admin-login');
-    const studentLogin = document.getElementById('student-login');
-
-    // Populate student list
-    async function loadStudents() {
-      const snapshot = await get(ref(db, "students"));
-      studentSelect.innerHTML = "";
-      if (snapshot.exists()) {
-        const students = snapshot.val();
-        for (let id in students) {
-          const option = document.createElement('option');
-          option.value = id;
-          option.textContent = students[id].name + " (Grade " + students[id].grade + ")";
-          studentSelect.appendChild(option);
+    // Check if user is already logged in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const role = localStorage.getItem("role");
+        const grade = localStorage.getItem("grade");
+        const subject = localStorage.getItem("subject");
+        if (role && grade && subject) {
+          showDashboard(role, grade, subject, user);
         }
+      }
+    });
+
+    // Login
+    window.loginUser = () => {
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+      const role = document.getElementById("user-role").value;
+      const grade = document.getElementById("grade").value;
+      const subject = document.getElementById("subject").value;
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          localStorage.setItem("role", role);
+          localStorage.setItem("grade", grade);
+          localStorage.setItem("subject", subject);
+          showDashboard(role, grade, subject, userCredential.user);
+        })
+        .catch(err => alert("Login failed: " + err.message));
+    };
+
+    // Show Dashboard
+    function showDashboard(role, grade, subject, user) {
+      document.getElementById("login-page").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+
+      if (role === "teacher") {
+        document.getElementById("dashboard-title").innerText = `Teacher Dashboard (${grade} - ${subject})`;
+        document.getElementById("teacher-section").style.display = "block";
+        document.getElementById("student-section").style.display = "none";
+        document.getElementById("teacher-phone-display").innerText = user.displayName || "Not set";
       } else {
-        const opt = document.createElement('option');
-        opt.textContent = "No students available";
-        studentSelect.appendChild(opt);
+        document.getElementById("dashboard-title").innerText = `Student Dashboard (${grade} - ${subject})`;
+        document.getElementById("teacher-section").style.display = "none";
+        document.getElementById("student-section").style.display = "block";
+        document.getElementById("teacher-contact").innerText = user.displayName 
+          ? `WhatsApp: ${user.displayName}` 
+          : "No teacher phone set.";
       }
     }
 
-    loadStudents();
-
-    // Switch role
-    loginRole.addEventListener('change', () => {
-      if (loginRole.value === "admin") {
-        adminLogin.style.display = "block";
-        studentLogin.style.display = "none";
-      } else {
-        adminLogin.style.display = "none";
-        studentLogin.style.display = "block";
-      }
-    });
-
-    // Admin login
-    document.getElementById('admin-login-btn').addEventListener('click', () => {
-      if (adminPassword.value === "mourishadmin") {
-        loginSection.style.display = "none";
-        adminSection.style.display = "block";
-        displayAdminStudents();
-      } else {
-        alert("Incorrect admin password!");
-      }
-    });
-
-    // Add student
-    document.getElementById('add-student-btn').addEventListener('click', async () => {
-      const name = document.getElementById('student-name').value;
-      const grade = document.getElementById('student-grade').value;
-      if (name.trim() === "") {
-        alert("Enter student name");
+    // Save Teacher Phone (update in auth)
+    window.saveTeacherPhone = () => {
+      const phone = document.getElementById("teacher-phone").value;
+      if (!phone.startsWith("+91")) {
+        alert("Please enter a valid phone number starting with +91");
         return;
       }
-      const newStudentRef = push(ref(db, "students"));
-      await set(newStudentRef, { name, grade });
-      alert("Student added!");
-      document.getElementById('student-name').value = "";
-      displayAdminStudents();
-      loadStudents();
-    });
+      const user = auth.currentUser;
+      if (user) {
+        updateProfile(user, { displayName: phone })
+          .then(() => {
+            document.getElementById("teacher-phone-display").innerText = phone;
+            alert("Phone number saved!");
+          })
+          .catch(err => alert("Error saving phone: " + err.message));
+      }
+    };
 
-    // Display students in admin panel
-    async function displayAdminStudents() {
-      const snapshot = await get(ref(db, "students"));
-      const listDiv = document.getElementById('admin-student-list');
-      listDiv.innerHTML = "";
-      if (snapshot.exists()) {
-        const students = snapshot.val();
-        for (let id in students) {
-          const div = document.createElement('div');
-          div.textContent = students[id].name + " - Grade " + students[id].grade;
-          listDiv.appendChild(div);
-        }
+    // Open WhatsApp Teacher
+    window.openWhatsAppTeacher = () => {
+      const phone = document.getElementById("teacher-phone-display").innerText;
+      if (phone !== "Not set") window.open(`https://wa.me/${phone.replace('+','')}`, "_blank");
+      else alert("Set your phone number first!");
+    };
+
+    // Open WhatsApp Student
+    window.openWhatsAppStudent = () => {
+      const phone = document.getElementById("teacher-contact").innerText.replace("WhatsApp: ", "");
+      if (phone && phone !== "No teacher phone set.") {
+        window.open(`https://wa.me/${phone.replace('+','')}`, "_blank");
       } else {
-        listDiv.textContent = "No students yet.";
+        alert("Teacher phone not set yet.");
       }
-    }
-
-    // Student login
-    document.getElementById('student-login-btn').addEventListener('click', async () => {
-      const studentId = studentSelect.value;
-      if (!studentId) return;
-      const snapshot = await get(child(ref(db), "students/" + studentId));
-      if (snapshot.exists()) {
-        const student = snapshot.val();
-        loginSection.style.display = "none";
-        studentSection.style.display = "block";
-        document.getElementById('student-name-display').textContent = student.name;
-        document.getElementById('student-grade-display').textContent = student.grade;
-        loadSubjects(student.grade);
-      }
-    });
-
-    // Load subjects
-    async function loadSubjects(grade) {
-      const snapshot = await get(ref(db, "grades/" + grade));
-      const ul = document.getElementById('student-subjects');
-      ul.innerHTML = "";
-      if (snapshot.exists()) {
-        const subjects = snapshot.val();
-        subjects.forEach(subject => {
-          const li = document.createElement('li');
-          li.textContent = subject;
-          ul.appendChild(li);
-        });
-      } else {
-        ul.innerHTML = "<li>No subjects available</li>";
-      }
-    }
+    };
 
     // Logout
-    document.getElementById('logout-admin').addEventListener('click', () => {
-      adminSection.style.display = "none";
-      loginSection.style.display = "block";
-    });
+    window.logout = () => {
+      signOut(auth).then(() => {
+        localStorage.clear();
+        document.getElementById("dashboard").style.display = "none";
+        document.getElementById("login-page").style.display = "block";
+      });
+    };
+  </script>
+</body>
+</html>html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mourish Education</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; }
+    .container { max-width: 420px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+    h1 { color: #333; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+    button { cursor: pointer; }
+    .login-btn { background: #4CAF50; color: white; border: none; }
+    .logout-btn { background: #e74c3c; color: white; border: none; }
+    .whatsapp-btn { background: #25D366; color: white; border: none; padding: 10px; border-radius: 5px; margin-top: 5px; }
+  </style>
+</head>
+<body>
 
-    document.getElementById('logout-student').addEventListener('click', () => {
-      studentSection.style.display = "none";
-      loginSection.style.display = "block";
-    });
+  <!-- Login -->
+  <div class="container" id="login-page">
+    <h1>Mourish Education</h1>
+    <input type="email" id="login-email" placeholder="Email" />
+    <input type="password" id="login-password" placeholder="Password" />
+    <select id="user-role">
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+    </select>
+    <select id="grade">
+      <option value="6">Grade 6</option>
+      <option value="7">Grade 7</option>
+      <option value="8">Grade 8</option>
+      <option value="9">Grade 9</option>
+      <option value="10">Grade 10</option>
+      <option value="11">Grade 11</option>
+      <option value="12">Grade 12</option>
+    </select>
+    <select id="subject">
+      <option value="Web Development">Web Development</option>
+      <option value="App Development">App Development</option>
+    </select>
+    <button class="login-btn" onclick="loginUser()">Login</button>
+  </div>
 
-    // Preload grades with subjects if empty
-    async function preloadGrades() {
-      const snapshot = await get(ref(db, "grades"));
-      if (!snapshot.exists()) {
-        const gradesData = {};
-        for (let i = 6; i <= 12; i++) {
-          gradesData[i] = ["App Development", "Web Development"];
+  <!-- Dashboard -->
+  <div class="container" id="dashboard" style="display:none;">
+    <h1 id="dashboard-title"></h1>
+
+    <!-- Teacher Section -->
+    <div id="teacher-section" style="display:none;">
+      <p>Enter your WhatsApp number:</p>
+      <input type="text" id="teacher-phone" placeholder="+911234567890" />
+      <button class="login-btn" onclick="saveTeacherPhone()">Save Phone Number</button>
+      <p><b>Your WhatsApp:</b> <span id="teacher-phone-display">Not set</span></p>
+      <button class="whatsapp-btn" onclick="openWhatsAppTeacher()">Open WhatsApp</button>
+    </div>
+
+    <!-- Student Section -->
+    <div id="student-section" style="display:none;">
+      <h3>Your Teacher's WhatsApp Contact</h3>
+      <p id="teacher-contact">No teacher phone set.</p>
+      <button class="whatsapp-btn" onclick="openWhatsAppStudent()">Check class or assignment</button>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { 
+      getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile 
+    } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDsD45pM8PM4VgeBASceBaiO69mCbqUPHE",
+      authDomain: "mourish-education.firebaseapp.com",
+      projectId: "mourish-education",
+      storageBucket: "mourish-education.firebasestorage.app",
+      messagingSenderId: "28402952102",
+      appId: "1:28402952102:web:12cfe7364ce8d0e7c05167",
+      measurementId: "G-Z5YHWLFYT9"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Check if user is already logged in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const role = localStorage.getItem("role");
+        const grade = localStorage.getItem("grade");
+        const subject = localStorage.getItem("subject");
+        if (role && grade && subject) {
+          showDashboard(role, grade, subject, user);
         }
-        await set(ref(db, "grades"), gradesData);
+      }
+    });
+
+    // Login
+    window.loginUser = () => {
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+      const role = document.getElementById("user-role").value;
+      const grade = document.getElementById("grade").value;
+      const subject = document.getElementById("subject").value;
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          localStorage.setItem("role", role);
+          localStorage.setItem("grade", grade);
+          localStorage.setItem("subject", subject);
+          showDashboard(role, grade, subject, userCredential.user);
+        })
+        .catch(err => alert("Login failed: " + err.message));
+    };
+
+    // Show Dashboard
+    function showDashboard(role, grade, subject, user) {
+      document.getElementById("login-page").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+
+      if (role === "teacher") {
+        document.getElementById("dashboard-title").innerText = `Teacher Dashboard (${grade} - ${subject})`;
+        document.getElementById("teacher-section").style.display = "block";
+        document.getElementById("student-section").style.display = "none";
+        document.getElementById("teacher-phone-display").innerText = user.displayName || "Not set";
+      } else {
+        document.getElementById("dashboard-title").innerText = `Student Dashboard (${grade} - ${subject})`;
+        document.getElementById("teacher-section").style.display = "none";
+        document.getElementById("student-section").style.display = "block";
+        document.getElementById("teacher-contact").innerText = user.displayName 
+          ? `WhatsApp: ${user.displayName}` 
+          : "No teacher phone set.";
       }
     }
-    preloadGrades();
-  </script>
 
+    // Save Teacher Phone (update in auth)
+    window.saveTeacherPhone = () => {
+      const phone = document.getElementById("teacher-phone").value;
+      if (!phone.startsWith("+91")) {
+        alert("Please enter a valid phone number starting with +91");
+        return;
+      }
+      const user = auth.currentUser;
+      if (user) {
+        updateProfile(user, { displayName: phone })
+          .then(() => {
+            document.getElementById("teacher-phone-display").innerText = phone;
+            alert("Phone number saved!");
+          })
+          .catch(err => alert("Error saving phone: " + err.message));
+      }
+    };
+
+    // Open WhatsApp Teacher
+    window.openWhatsAppTeacher = () => {
+      const phone = document.getElementById("teacher-phone-display").innerText;
+      if (phone !== "Not set") window.open(`https://wa.me/${phone.replace('+','')}`, "_blank");
+      else alert("Set your phone number first!");
+    };
+
+    // Open WhatsApp Student
+    window.openWhatsAppStudent = () => {
+      const phone = document.getElementById("teacher-contact").innerText.replace("WhatsApp: ", "");
+      if (phone && phone !== "No teacher phone set.") {
+        window.open(`https://wa.me/${phone.replace('+','')}`, "_blank");
+      } else {
+        alert("Teacher phone not set yet.");
+      }
+    };
+
+    // Logout
+    window.logout = () => {
+      signOut(auth).then(() => {
+        localStorage.clear();
+        document.getElementById("dashboard").style.display = "none";
+        document.getElementById("login-page").style.display = "block";
+      });
+    };
+  </script>
 </body>
 </html>
