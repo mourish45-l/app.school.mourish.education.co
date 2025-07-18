@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mourish Education</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f2f2f2; }
+    .container { max-width: 500px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1, h2 { text-align: center; color: #333; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+    button:hover { background: #45a049; }
+    #admin-section, #student-section { display: none; }
+    .logout-btn { background: #e74c3c; margin-top: 20px; }
+    .student-list { margin: 10px 0; }
+    .student-list div { background: #eee; padding: 8px; margin: 5px 0; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="login-section">
+    <h1>Mourish Education</h1>
+    <h2>Login</h2>
+    <label>Login as:</label>
+    <select id="login-role">
+      <option value="student">Student</option>
+      <option value="admin">Admin</option>
+    </select>
+    <div id="student-login">
+      <label>Select Student:</label>
+      <select id="student-select"></select>
+      <button id="student-login-btn">Login as Student</button>
+    </div>
+    <div id="admin-login" style="display:none;">
+      <label>Admin Password:</label>
+      <input type="password" id="admin-password">
+      <button id="admin-login-btn">Login as Admin</button>
+    </div>
+  </div>
+
+  <!-- Admin Section -->
+  <div class="container" id="admin-section">
+    <h1>Admin Dashboard</h1>
+    <h2>Add Student</h2>
+    <input type="text" id="student-name" placeholder="Student Name">
+    <select id="student-grade">
+      <option value="6">Grade 6</option>
+      <option value="7">Grade 7</option>
+      <option value="8">Grade 8</option>
+      <option value="9">Grade 9</option>
+      <option value="10">Grade 10</option>
+      <option value="11">Grade 11</option>
+      <option value="12">Grade 12</option>
+    </select>
+    <button id="add-student-btn">Add Student</button>
+    <h2>Student List</h2>
+    <div class="student-list" id="admin-student-list"></div>
+    <button class="logout-btn" id="logout-admin">Logout</button>
+  </div>
+
+  <!-- Student Section -->
+  <div class="container" id="student-section">
+    <h1>Welcome, <span id="student-name-display"></span></h1>
+    <h2>Grade: <span id="student-grade-display"></span></h2>
+    <h2>Subjects:</h2>
+    <ul id="student-subjects"></ul>
+    <button class="logout-btn" id="logout-student">Logout</button>
+  </div>
+
+  <script type="module">
+    // Firebase setup
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getDatabase, ref, set, get, child, push } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDsD45pM8PM4VgeBASceBaiO69mCbqUPHE",
+      authDomain: "mourish-education.firebaseapp.com",
+      databaseURL: "https://mourish-education-default-rtdb.firebaseio.com/",
+      projectId: "mourish-education",
+      storageBucket: "mourish-education.firebasestorage.app",
+      messagingSenderId: "28402952102",
+      appId: "1:28402952102:web:12cfe7364ce8d0e7c05167",
+      measurementId: "G-Z5YHWLFYT9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const loginSection = document.getElementById('login-section');
+    const adminSection = document.getElementById('admin-section');
+    const studentSection = document.getElementById('student-section');
+    const loginRole = document.getElementById('login-role');
+    const adminPassword = document.getElementById('admin-password');
+    const studentSelect = document.getElementById('student-select');
+    const adminLogin = document.getElementById('admin-login');
+    const studentLogin = document.getElementById('student-login');
+
+    // Populate student list
+    async function loadStudents() {
+      const snapshot = await get(ref(db, "students"));
+      studentSelect.innerHTML = "";
+      if (snapshot.exists()) {
+        const students = snapshot.val();
+        for (let id in students) {
+          const option = document.createElement('option');
+          option.value = id;
+          option.textContent = students[id].name + " (Grade " + students[id].grade + ")";
+          studentSelect.appendChild(option);
+        }
+      } else {
+        const opt = document.createElement('option');
+        opt.textContent = "No students available";
+        studentSelect.appendChild(opt);
+      }
+    }
+
+    loadStudents();
+
+    // Switch role
+    loginRole.addEventListener('change', () => {
+      if (loginRole.value === "admin") {
+        adminLogin.style.display = "block";
+        studentLogin.style.display = "none";
+      } else {
+        adminLogin.style.display = "none";
+        studentLogin.style.display = "block";
+      }
+    });
+
+    // Admin login
+    document.getElementById('admin-login-btn').addEventListener('click', () => {
+      if (adminPassword.value === "mourishadmin") {
+        loginSection.style.display = "none";
+        adminSection.style.display = "block";
+        displayAdminStudents();
+      } else {
+        alert("Incorrect admin password!");
+      }
+    });
+
+    // Add student
+    document.getElementById('add-student-btn').addEventListener('click', async () => {
+      const name = document.getElementById('student-name').value;
+      const grade = document.getElementById('student-grade').value;
+      if (name.trim() === "") {
+        alert("Enter student name");
+        return;
+      }
+      const newStudentRef = push(ref(db, "students"));
+      await set(newStudentRef, { name, grade });
+      alert("Student added!");
+      document.getElementById('student-name').value = "";
+      displayAdminStudents();
+      loadStudents();
+    });
+
+    // Display students in admin panel
+    async function displayAdminStudents() {
+      const snapshot = await get(ref(db, "students"));
+      const listDiv = document.getElementById('admin-student-list');
+      listDiv.innerHTML = "";
+      if (snapshot.exists()) {
+        const students = snapshot.val();
+        for (let id in students) {
+          const div = document.createElement('div');
+          div.textContent = students[id].name + " - Grade " + students[id].grade;
+          listDiv.appendChild(div);
+        }
+      } else {
+        listDiv.textContent = "No students yet.";
+      }
+    }
+
+    // Student login
+    document.getElementById('student-login-btn').addEventListener('click', async () => {
+      const studentId = studentSelect.value;
+      if (!studentId) return;
+      const snapshot = await get(child(ref(db), "students/" + studentId));
+      if (snapshot.exists()) {
+        const student = snapshot.val();
+        loginSection.style.display = "none";
+        studentSection.style.display = "block";
+        document.getElementById('student-name-display').textContent = student.name;
+        document.getElementById('student-grade-display').textContent = student.grade;
+        loadSubjects(student.grade);
+      }
+    });
+
+    // Load subjects
+    async function loadSubjects(grade) {
+      const snapshot = await get(ref(db, "grades/" + grade));
+      const ul = document.getElementById('student-subjects');
+      ul.innerHTML = "";
+      if (snapshot.exists()) {
+        const subjects = snapshot.val();
+        subjects.forEach(subject => {
+          const li = document.createElement('li');
+          li.textContent = subject;
+          ul.appendChild(li);
+        });
+      } else {
+        ul.innerHTML = "<li>No subjects available</li>";
+      }
+    }
+
+    // Logout
+    document.getElementById('logout-admin').addEventListener('click', () => {
+      adminSection.style.display = "none";
+      loginSection.style.display = "block";
+    });
+
+    document.getElementById('logout-student').addEventListener('click', () => {
+      studentSection.style.display = "none";
+      loginSection.style.display = "block";
+    });
+
+    // Preload grades with subjects if empty
+    async function preloadGrades() {
+      const snapshot = await get(ref(db, "grades"));
+      if (!snapshot.exists()) {
+        const gradesData = {};
+        for (let i = 6; i <= 12; i++) {
+          gradesData[i] = ["App Development", "Web Development"];
+        }
+        await set(ref(db, "grades"), gradesData);
+      }
+    }
+    preloadGrades();
+  </script>
+
+</body>
+</html>
